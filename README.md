@@ -1,5 +1,14 @@
 # MMRec
+```shell
+conda deactivate
+source ~/anaconda3_2024/bin/activate
+conda activate MMRec
+cd src
+```
 
+
+
+# ---------------------------------------- Split Line ----------------------------------------- #
 <div align="center">
   <a href="https://github.com/enoche/MultimodalRecSys"><img width="300px" height="auto" src="https://github.com/enoche/MMRec/blob/master/images/logo.png"></a>
 </div>

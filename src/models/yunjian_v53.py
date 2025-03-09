@@ -15,9 +15,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from common.abstract_recommender import GeneralRecommender
 
-class YunJian_V53(GeneralRecommender):
+class YunJian_v53(GeneralRecommender):
     def __init__(self, config, dataset):
-        super(YunJian_V53, self).__init__(config, dataset)
+        super(YunJian_v53, self).__init__(config, dataset)
 
         self.embedding_dim = config['embedding_size']
         self.feat_embed_dim = config['feat_embed_dim']
@@ -29,6 +29,7 @@ class YunJian_V53(GeneralRecommender):
 
         self.n_nodes = self.n_users + self.n_items
 
+        self.mge_weight = config['mge_weight']
         self.relation_distillation_func = config['relation_distillation_func']
         self.behavior_distillation_weight = config['behavior_distillation_weight']
         self.visual_distillation_weight = config['visual_distillation_weight']
@@ -37,8 +38,6 @@ class YunJian_V53(GeneralRecommender):
         self.image_knn_k = config['image_knn_k']
         self.text_knn_k = config['text_knn_k']
         self.behavior_knn_k = config['behavior_knn_k']
-        self.enable_batch_distillation = config['enable_batch_distillation']
-        self.dataset = config['dataset']
 
         # load dataset info
         self.interaction_matrix = dataset.inter_matrix(form='coo').astype(np.float32)
@@ -57,11 +56,9 @@ class YunJian_V53(GeneralRecommender):
         if self.v_feat is not None:
             self.image_embedding = nn.Embedding.from_pretrained(self.v_feat, freeze=True)
             self.item_image_trs = nn.Parameter(nn.init.xavier_uniform_(torch.zeros(self.v_feat.shape[1], self.feat_embed_dim)))
-            self.v_hyper = nn.Parameter(nn.init.xavier_uniform_(torch.zeros(self.v_feat.shape[1], self.hyper_num)))
         if self.t_feat is not None:
             self.text_embedding = nn.Embedding.from_pretrained(self.t_feat, freeze=True)
             self.item_text_trs = nn.Parameter(nn.init.xavier_uniform_(torch.zeros(self.t_feat.shape[1], self.feat_embed_dim)))
-            self.t_hyper = nn.Parameter(nn.init.xavier_uniform_(torch.zeros(self.t_feat.shape[1], self.hyper_num)))
 
 
         if self.behavior_distillation_weight > 0:
@@ -77,8 +74,16 @@ class YunJian_V53(GeneralRecommender):
             i_v_feat = F.normalize(self.v_feat, dim=1)
             self.i2i_v_relation = torch.matmul(i_v_feat, i_v_feat.T)
             torch.diagonal(self.i2i_v_relation).fill_(0)
-            self.v_topk_values
-
+            self.v_topk_values, self.v_topk_indices = torch.topk(self.i2i_v_relation, k=self.image_knn_k, dim=1, largest=True, sorted=True)
+            self.i2i_v_distribution = F.softmax(self.v_topk_values, dim=-1)
+        
+        if self.textual_distillation_weight > 0:
+            i_t_feat = F.normalize(self.t_feat, dim=1)
+            self.i2i_t_relation = torch.matmul(i_t_feat, i_t_feat.T)
+            torch.diagonal(self.i2i_t_relation).fill_(0)
+            self.t_topk_values, self.t_topk_indices = torch.topk(self.i2i_t_relation, k=self.text_knn_k, dim=1, largest=True, sorted=True)
+            self.i2i_t_distribution = F.softmax(self.t_topk_values, dim=-1)
+        
 
     def scipy_matrix_to_sparse_tenser(self, matrix, shape):
         row = matrix.row
@@ -133,18 +138,6 @@ class YunJian_V53(GeneralRecommender):
         return mge_feats
     
     def forward(self):
-        # hyperedge dependencies constructing
-        if self.v_feat is not None:
-            iv_hyper = torch.mm(self.image_embedding.weight, self.v_hyper)
-            uv_hyper = torch.mm(self.adj, iv_hyper)
-            iv_hyper = F.gumbel_softmax(iv_hyper, self.tau, dim=1, hard=False)
-            uv_hyper = F.gumbel_softmax(uv_hyper, self.tau, dim=1, hard=False)
-        if self.t_feat is not None:
-            it_hyper = torch.mm(self.text_embedding.weight, self.t_hyper)
-            ut_hyper = torch.mm(self.adj, it_hyper)
-            it_hyper = F.gumbel_softmax(it_hyper, self.tau, dim=1, hard=False)
-            ut_hyper = F.gumbel_softmax(ut_hyper, self.tau, dim=1, hard=False)
-        
         # CGE: collaborative graph embedding
         cge_embs = self.cge()
         
@@ -153,22 +146,17 @@ class YunJian_V53(GeneralRecommender):
             v_feats = self.mge('v')
             t_feats = self.mge('t')
             # local embeddings = collaborative-related embedding + modality-related embedding
-            mge_embs = F.normalize(v_feats) + F.normalize(t_feats)
-            lge_embs = cge_embs + mge_embs
-            # GHE: global hypergraph embedding
-            uv_hyper_embs, iv_hyper_embs = self.hgnnLayer(self.drop(iv_hyper), self.drop(uv_hyper), cge_embs[self.n_users:])
-            ut_hyper_embs, it_hyper_embs = self.hgnnLayer(self.drop(it_hyper), self.drop(ut_hyper), cge_embs[self.n_users:])
-            av_hyper_embs = torch.concat([uv_hyper_embs, iv_hyper_embs], dim=0)
-            at_hyper_embs = torch.concat([ut_hyper_embs, it_hyper_embs], dim=0)
-            ghe_embs = av_hyper_embs + at_hyper_embs
-            # local embeddings + alpha * global embeddings
-            all_embs = lge_embs + self.alpha * F.normalize(ghe_embs)
+            norm_v_feats, norm_t_feats = F.normalize(v_feats), F.normalize(t_feats)
+            lge_embs = cge_embs + self.mge_weight * (norm_v_feats + norm_t_feats)
+            all_embs = lge_embs
         else:
             all_embs = cge_embs
 
         u_embs, i_embs = torch.split(all_embs, [self.n_users, self.n_items], dim=0)
+        uv_embs, iv_embs = torch.split(norm_v_feats, [self.n_users, self.n_items], dim=0)
+        ut_embs, it_embs = torch.split(norm_t_feats, [self.n_users, self.n_items], dim=0)
 
-        return u_embs, i_embs, [uv_hyper_embs, iv_hyper_embs, ut_hyper_embs, it_hyper_embs]
+        return u_embs, i_embs, uv_embs, iv_embs, ut_embs, it_embs
         
     def bpr_loss(self, users, pos_items, neg_items):
         pos_scores = torch.sum(torch.mul(users, pos_items), dim=1)
@@ -193,7 +181,7 @@ class YunJian_V53(GeneralRecommender):
         return reg_loss
 
     def calculate_loss(self, interaction):
-        ua_embeddings, ia_embeddings, hyper_embeddings = self.forward()
+        ua_embeddings, ia_embeddings, uv_embeddings, iv_embeddings, ut_embeddings, it_embeddings = self.forward()
 
         users = interaction[0]
         pos_items = interaction[1]
@@ -204,18 +192,59 @@ class YunJian_V53(GeneralRecommender):
 
         batch_bpr_loss = self.bpr_loss(u_g_embeddings, pos_i_g_embeddings, neg_i_g_embeddings)
 
-        [uv_embs, iv_embs, ut_embs, it_embs] = hyper_embeddings
-        batch_hcl_loss = self.ssl_triple_loss(uv_embs[users], ut_embs[users], ut_embs) + self.ssl_triple_loss(iv_embs[pos_items], it_embs[pos_items], it_embs)
-        
         batch_reg_loss = self.reg_loss(u_g_embeddings, pos_i_g_embeddings, neg_i_g_embeddings)
 
-        loss = batch_bpr_loss + self.cl_weight * batch_hcl_loss + self.reg_weight * batch_reg_loss
+        loss = batch_bpr_loss + self.reg_weight * batch_reg_loss
+
+        if self.behavior_distillation_weight > 0:
+            ia_embeddings = F.normalize(ia_embeddings, dim=1)
+            ia_topk_embeddigns = ia_embeddings[self.b_topk_indices.view(-1)].view(self.b_topk_indices.shape[0], self.behavior_knn_k, -1) # [item_num, k, dim]
+            i2i_a_topk_similarity = torch.einsum('nd,nkd->nk', ia_embeddings, ia_topk_embeddigns) # [item_num, topk]
+
+            i2i_a_similarity_masked = i2i_a_topk_similarity.masked_fill(~self.b_zero_mask.bool(), torch.tensor(float('-inf')).to(self.device))
+            i2i_a_probability = F.softmax(i2i_a_similarity_masked, dim=-1)
+            i2i_a_probability = torch.where(torch.isnan(i2i_a_probability), torch.tensor(1e-9).to(self.device), i2i_a_probability)
+
+            if self.relation_distillation_func == "CE":
+                behavior_distillation_loss = -1 * self.i2i_b_distribution * torch.log(i2i_a_probability + 1e-9)
+            elif self.relation_distillation_func == "KL":
+                behavior_distillation_loss = self.i2i_b_distribution * torch.log((self.i2i_b_distribution + 1e-9) / (i2i_a_probability + 1e-9))
+            else:
+                raise NotImplementedError
+
+            loss += self.behavior_distillation_weight * behavior_distillation_loss.sum(dim=-1).mean()
+
+        if self.visual_distillation_weight > 0:
+            iv_topk_embeddings = iv_embeddings[self.v_topk_indices.view(-1)].view(self.v_topk_indices.shape[0], self.image_knn_k, -1) # [item_num, k, dim]
+            i2i_v_topk_similarity = torch.einsum('nd,nkd->nk', iv_embeddings, iv_topk_embeddings) # [item_num, topk]
+            i2i_v_probability = F.softmax(i2i_v_topk_similarity, dim=-1)
+
+            if self.relation_distillation_func == "CE":
+                visual_distillation_loss = -1 * self.i2i_v_distribution * torch.log(i2i_v_probability)
+            elif self.relation_distillation_func == "KL":
+                visual_distillation_loss = self.i2i_v_distribution * torch.log(self.i2i_v_distribution / i2i_v_probability)
+            else:
+                raise NotImplementedError
+            loss += self.visual_distillation_weight * visual_distillation_loss.sum(dim=-1).mean()
+
+        if self.textual_distillation_weight > 0:
+            it_topk_embeddings = it_embeddings[self.t_topk_indices.view(-1)].view(self.t_topk_indices.shape[0], self.text_knn_k, -1) # [item_num, k, dim]
+            i2i_t_topk_similarity = torch.einsum('nd,nkd->nk', it_embeddings, it_topk_embeddings) # [item_num, topk]
+            i2i_t_probability = F.softmax(i2i_t_topk_similarity, dim=-1)
+
+            if self.relation_distillation_func == "CE":
+                textual_distillation_loss = -1 * self.i2i_t_distribution * torch.log(i2i_t_probability)
+            elif self.relation_distillation_func == "KL":
+                textual_distillation_loss = self.i2i_t_distribution * torch.log(self.i2i_t_distribution / i2i_t_probability)
+            else:
+                raise NotImplementedError
+            loss += self.textual_distillation_weight * textual_distillation_loss.sum(dim=-1).mean()
 
         return loss
 
     def full_sort_predict(self, interaction):
         user = interaction[0]
-        user_embs, item_embs, _ = self.forward()
+        user_embs, item_embs, _, _, _, _ = self.forward()
         scores = torch.matmul(user_embs[user], item_embs.T)
         return scores
 

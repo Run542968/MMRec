@@ -137,6 +137,8 @@ class TrainDataLoader(AbstractDataLoader):
             self.user_user_dict = self._get_my_neighbors(self.config['USER_ID_FIELD'])
             self.item_item_dict = self._get_my_neighbors(self.config['ITEM_ID_FIELD'])
 
+        self.modality_relation_distillaton_loss_required = config['use_modality_distillation_loss']
+
     def pretrain_setup(self):
         """
         Reset dataloader. Outputing the same positive & negative samples with each training.
@@ -230,7 +232,7 @@ class TrainDataLoader(AbstractDataLoader):
         user_tensor = torch.tensor(cur_data[self.config['USER_ID_FIELD']].values).type(torch.LongTensor).to(self.device)
         item_tensor = torch.tensor(cur_data[self.config['ITEM_ID_FIELD']].values).type(torch.LongTensor).to(self.device)
         batch_tensor = torch.cat((torch.unsqueeze(user_tensor, 0),
-                                  torch.unsqueeze(item_tensor, 0)))
+                                  torch.unsqueeze(item_tensor, 0))) # [2,bs]
         u_ids = cur_data[self.config['USER_ID_FIELD']]
         # sampling negative items only in the dataset (train)
         neg_ids = self._sample_neg_ids(u_ids).to(self.device)
@@ -238,14 +240,21 @@ class TrainDataLoader(AbstractDataLoader):
         if self.neighborhood_loss_required:
             i_ids = cur_data[self.config['ITEM_ID_FIELD']]
             pos_neighbors, neg_neighbors = self._get_neighborhood_samples(i_ids, self.config['ITEM_ID_FIELD'])
-            pos_neighbors, neg_neighbors = pos_neighbors.to(self.device), neg_neighbors.to(self.device)
+            pos_neighbors, neg_neighbors = pos_neighbors.to(self.device), neg_neighbors.to(self.device) # [5,bs]
 
             batch_tensor = torch.cat((batch_tensor, neg_ids.unsqueeze(0),
                                       pos_neighbors.unsqueeze(0), neg_neighbors.unsqueeze(0)))
 
         # merge negative samples
         else:
-            batch_tensor = torch.cat((batch_tensor, neg_ids.unsqueeze(0)))
+            batch_tensor = torch.cat((batch_tensor, neg_ids.unsqueeze(0))) # [3,bs]
+
+        if self.modality_relation_distillaton_loss_required:
+            other_pos_ids = self._sample_other_pos_ids(cur_data[self.config['USER_ID_FIELD']], cur_data[self.config['ITEM_ID_FIELD']]).to(self.device)
+            batch_tensor = torch.cat((batch_tensor, other_pos_ids.unsqueeze(0))) # [4,bs]
+        else:
+            pass
+
 
         return batch_tensor
 
@@ -273,6 +282,15 @@ class TrainDataLoader(AbstractDataLoader):
                 iid = self._random()
             neg_ids.append(iid)
         return torch.tensor(neg_ids).type(torch.LongTensor)
+
+    def _sample_other_pos_ids(self, user_ids, item_ids):
+        other_pos_ids = []
+        for u, pos_iid in zip(user_ids, item_ids):
+            other_pos_id = random.sample(self.history_items_per_u[u],1)[0]
+            while other_pos_id == pos_iid:
+                other_pos_id = random.sample(self.history_items_per_u[u],1)[0]
+            other_pos_ids.append(other_pos_id)
+        return torch.tensor(other_pos_ids).type(torch.LongTensor)
 
     def _get_my_neighbors(self, id_str):
         ret_dict = {}
