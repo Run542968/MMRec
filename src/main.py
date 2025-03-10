@@ -29,7 +29,8 @@ if __name__ == '__main__':
     parser.add_argument('--image_knn_k', type=int, default=[5,10,15,20], nargs='+')
     parser.add_argument('--text_knn_k', type=int, default=[5,10,15,20], nargs='+')
     parser.add_argument('--behavior_knn_k', type=int, default=3000)
-
+    parser.add_argument('--train_batch_size', type=int, default=2048)
+    
     args, _ = parser.parse_known_args()
     assert _== [], (f"_: {_}")
 
@@ -44,7 +45,8 @@ if __name__ == '__main__':
         'behavior_graph_dropout_threshold': args.behavior_graph_dropout_threshold,
         'image_knn_k': args.image_knn_k,
         'text_knn_k': args.text_knn_k,
-        'behavior_knn_k': args.behavior_knn_k
+        'behavior_knn_k': args.behavior_knn_k,
+        'train_batch_size': args.train_batch_size
     }
 
     quick_start(model=args.model, dataset=args.dataset, config_dict=config_dict, save_model=True)

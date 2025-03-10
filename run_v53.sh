@@ -26,13 +26,15 @@ else
 fi
 
 ## baby
-python main.py --gpu_id 0 --dataset 'baby' --model 'YunJian_v53' --exp_name 'YunJian_v52_mge10_ce_bdw10_bgdt0_vdw10_tdw10' --mge_weight 1.0 --relation_distillation_func 'CE' --behavior_distillation_weight 1.0 --behavior_graph_dropout_threshold 0 --visual_distillation_weight 1.0 --image_knn_k 5 10 15 20 --textual_distillation_weight 1.0 --text_knn_k 5 10 15 20 --behavior_knn_k 2500
+python main.py --gpu_id 4 --dataset 'baby' --model 'YunJian_v53' --exp_name 'YunJian_v52_mge10_ce_bdw10_bgdt0_vdw10_tdw10' --mge_weight 1.0 --relation_distillation_func 'CE' --behavior_distillation_weight 1.0 --behavior_graph_dropout_threshold 0 --visual_distillation_weight 1.0 --image_knn_k 5 10 15 20 --textual_distillation_weight 1.0 --text_knn_k 5 10 15 20 --behavior_knn_k 2500
+
+python result_collector.py --dataset 'baby' --exp_list YunJian_v52_mge10_ce_bdw10_bgdt0_vdw10_tdw10
 
 ## microlens
-python main.py --dataset 'microlens' --model 'YunJian_v53' --exp_name 'YunJian_v52_mge10_ce_bdw10_bgdt0_vdw10_tdw10' --mge_weight 1.0 --relation_distillation_func 'CE' --behavior_distillation_weight 1.0 --behavior_graph_dropout_threshold 0 --visual_distillation_weight 1.0 --image_knn_k 5 10 15 20 --textual_distillation_weight 1.0 --text_knn_k 5 10 15 20 --behavior_knn_k 1200
+python main.py --gpu_id 5 --dataset 'microlens' --model 'YunJian_v53' --exp_name 'YunJian_v52_mge10_ce_bdw10_bgdt0_vdw10_tdw10' --mge_weight 1.0 --relation_distillation_func 'CE' --behavior_distillation_weight 1.0 --behavior_graph_dropout_threshold 0 --visual_distillation_weight 1.0 --image_knn_k 5 10 15 20 --textual_distillation_weight 1.0 --text_knn_k 5 10 15 20 --behavior_knn_k 1200
 
 ## sports
-python main.py --dataset 'sports' --model 'YunJian_v53' --exp_name 'YunJian_v52_mge10_ce_bdw10_bgdt0_vdw10_tdw10' --mge_weight 1.0 --relation_distillation_func 'CE' --behavior_distillation_weight 1.0 --behavior_graph_dropout_threshold 0 --visual_distillation_weight 1.0 --image_knn_k 5 10 15 20 --textual_distillation_weight 1.0 --text_knn_k 5 10 15 20 --behavior_knn_k 4000
+python main.py --gpu_id 6 --dataset 'sports' --model 'YunJian_v53' --exp_name 'YunJian_v52_mge10_ce_bdw10_bgdt0_vdw10_tdw10' --mge_weight 1.0 --relation_distillation_func 'CE' --behavior_distillation_weight 1.0 --behavior_graph_dropout_threshold 0 --visual_distillation_weight 1.0 --image_knn_k 5 10 15 20 --textual_distillation_weight 1.0 --text_knn_k 5 10 15 20 --behavior_knn_k 4000 --train_batch_size 1024
 
 ## clothing
 python main.py --dataset 'clothing' --model 'YunJian_v53' --exp_name 'YunJian_v52_mge10_ce_bdw10_bgdt0_vdw10_tdw10' --mge_weight 1.0 --relation_distillation_func 'CE' --behavior_distillation_weight 1.0 --behavior_graph_dropout_threshold 0 --visual_distillation_weight 1.0 --image_knn_k 5 10 15 20 --textual_distillation_weight 1.0 --text_knn_k 5 10 15 20 --behavior_knn_k 1300

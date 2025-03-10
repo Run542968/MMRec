@@ -3,7 +3,8 @@
 conda deactivate
 source ~/anaconda3_2024/bin/activate
 conda activate MMRec
-cd src
+cd ~/MMRec/src
+
 ```
 
 
