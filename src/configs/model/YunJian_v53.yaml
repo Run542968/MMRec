@@ -12,9 +12,9 @@ use_modality_distillation_loss: False
 
 #
 relation_distillation_func: 'CE' # [CE, KL]
-behavior_distillation_weight: 1.0
-visual_distillation_weight: 1.0
-textual_distillation_weight: 1.0
+behavior_distillation_weight: 0.0
+visual_distillation_weight: 0.0
+textual_distillation_weight: 0.0
 behavior_graph_dropout_threshold: 0
 #
 image_knn_k: [5,10,15,20]

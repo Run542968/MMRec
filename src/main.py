@@ -15,15 +15,18 @@ os.environ['NUMEXPR_MAX_THREADS'] = '48'
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    # basic setting
     parser.add_argument('--model', '-m', type=str, default='SELFCFED_LGN', help='name of models')
     parser.add_argument('--dataset', '-d', type=str, default='baby', help='name of datasets')
     parser.add_argument('--gpu_id', type=int, default=0)
-
     parser.add_argument('--exp_name', type=str, default='', help='name of experiment.')
+    parser.add_argument('--mg', default=False, action='store_true', help='whether to use mg.')
+
+    # config for YunJian
     parser.add_argument('--relation_distillation_func', type=str, default='CE', choices=('CE','KL'))
-    parser.add_argument('--behavior_distillation_weight', type=float, default=1.0)
-    parser.add_argument('--visual_distillation_weight', type=float, default=1.0)
-    parser.add_argument('--textual_distillation_weight', type=float, default=1.0)
+    parser.add_argument('--behavior_distillation_weight', type=float, default=0.0)
+    parser.add_argument('--visual_distillation_weight', type=float, default=0.0)
+    parser.add_argument('--textual_distillation_weight', type=float, default=0.0)
     parser.add_argument('--mge_weight', type=float, default=1.0)
     parser.add_argument('--behavior_graph_dropout_threshold', type=int, default=0)
     parser.add_argument('--image_knn_k', type=int, default=[5,10,15,20], nargs='+')
@@ -49,6 +52,6 @@ if __name__ == '__main__':
         'train_batch_size': args.train_batch_size
     }
 
-    quick_start(model=args.model, dataset=args.dataset, config_dict=config_dict, save_model=True)
+    quick_start(model=args.model, dataset=args.dataset, config_dict=config_dict, save_model=True, mg = args.mg)
 
 

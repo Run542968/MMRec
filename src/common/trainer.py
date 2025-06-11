@@ -280,6 +280,11 @@ class Trainer(AbstractTrainer):
                     self.best_valid_result = valid_result
                     self.best_test_upon_valid = test_result
 
+                    # # NOTE: save the embedding of user and item
+                    # user_embs, item_embs, _,  = self.model.forward()
+                    # np.save('./mgcn_user_embs', user_embs.detach().cpu().numpy())
+                    # np.save('./mgcn_item_embs', item_embs.detach().cpu().numpy())
+
                 if stop_flag:
                     stop_output = '+++++Finished training, best eval result in epoch %d' % \
                                   (epoch_idx - self.cur_step * self.eval_step)

@@ -42,6 +42,7 @@ def quick_start(model, dataset, config_dict, save_model=True, mg=False):
         EvalDataLoader(config, valid_dataset, additional_dataset=train_dataset, batch_size=config['eval_batch_size']),
         EvalDataLoader(config, test_dataset, additional_dataset=train_dataset, batch_size=config['eval_batch_size']))
 
+
     ############ Dataset loadded, run model
     hyper_ret = []
     val_metric = config['valid_metric'].lower()
