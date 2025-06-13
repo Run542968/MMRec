@@ -22,7 +22,6 @@ if __name__ == '__main__':
     parser.add_argument('--exp_name', type=str, default='', help='name of experiment.')
     parser.add_argument('--mg', default=False, action='store_true', help='whether to use mg.')
 
-    # config for YunJian
     parser.add_argument('--relation_distillation_func', type=str, default='CE', choices=('CE','KL'))
     parser.add_argument('--behavior_distillation_weight', type=float, default=0.0)
     parser.add_argument('--visual_distillation_weight', type=float, default=0.0)
