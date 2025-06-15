@@ -14,7 +14,7 @@ from utils.configurator import Config
 from utils.utils import init_seed, get_model, get_trainer, dict2str
 import platform
 import os
-
+import torch
 
 def quick_start(model, dataset, config_dict, save_model=True, mg=False):
     # merge config dict
@@ -68,42 +68,57 @@ def quick_start(model, dataset, config_dict, save_model=True, mg=False):
 
         logger.info('========={}/{}: Parameters:{}={}======='.format(
             idx+1, total_loops, config['hyper_parameters'], hyper_tuple))
+        if config['mode'] == 'train':
+            # set random state of dataloader
+            train_data.pretrain_setup()
+            # model loading and initialization
+            model = get_model(config['model'])(config, train_data).to(config['device'])
+            logger.info(model)
 
-        # set random state of dataloader
-        train_data.pretrain_setup()
-        # model loading and initialization
-        model = get_model(config['model'])(config, train_data).to(config['device'])
-        logger.info(model)
+            # trainer loading and initialization
+            trainer = get_trainer()(config, model, mg)
+            # debug
+            # model training
+            best_valid_score, best_valid_result, best_test_upon_valid = trainer.fit(train_data, valid_data=valid_data, test_data=test_data, saved=save_model)
+            #########
+            hyper_ret.append((hyper_tuple, best_valid_result, best_test_upon_valid))
 
-        # trainer loading and initialization
-        trainer = get_trainer()(config, model, mg)
-        # debug
-        # model training
-        best_valid_score, best_valid_result, best_test_upon_valid = trainer.fit(train_data, valid_data=valid_data, test_data=test_data, saved=save_model)
-        #########
-        hyper_ret.append((hyper_tuple, best_valid_result, best_test_upon_valid))
+            # save best test
+            if best_test_upon_valid[val_metric] > best_test_value:
+                best_test_value = best_test_upon_valid[val_metric]
+                best_test_idx = idx
+            idx += 1
 
-        # save best test
-        if best_test_upon_valid[val_metric] > best_test_value:
-            best_test_value = best_test_upon_valid[val_metric]
-            best_test_idx = idx
-        idx += 1
+            logger.info('best valid result: {}'.format(dict2str(best_valid_result)))
+            logger.info('test result: {}'.format(dict2str(best_test_upon_valid)))
+            logger.info('████Current BEST████:\nParameters: {}={},\n'
+                        'Valid: {},\nTest: {}\n\n\n'.format(config['hyper_parameters'],
+                hyper_ret[best_test_idx][0], dict2str(hyper_ret[best_test_idx][1]), dict2str(hyper_ret[best_test_idx][2])))
 
-        logger.info('best valid result: {}'.format(dict2str(best_valid_result)))
-        logger.info('test result: {}'.format(dict2str(best_test_upon_valid)))
-        logger.info('████Current BEST████:\nParameters: {}={},\n'
-                    'Valid: {},\nTest: {}\n\n\n'.format(config['hyper_parameters'],
-            hyper_ret[best_test_idx][0], dict2str(hyper_ret[best_test_idx][1]), dict2str(hyper_ret[best_test_idx][2])))
+        elif config['mode'] == 'test':
+            # model loading and initialization
+            model = get_model(config['model'])(config, train_data).to(config['device'])
+            logger.info(model)
+            model.load_state_dict(torch.load('./best_ckpt.pth'))
+            model.eval()
+
+            # trainer loading and initialization
+            trainer = get_trainer()(config, model, mg)
+
+            _, test_result = trainer._valid_epoch(test_data)
+            logger.info('test result: \n' + dict2str(test_result))
+        else:
+            raise ValueError
 
     # log info
     logger.info('\n============All Over=====================')
     for (p, k, v) in hyper_ret:
         logger.info('Parameters: {}={},\n best valid: {},\n best test: {}'.format(config['hyper_parameters'],
-                                                                                  p, dict2str(k), dict2str(v)))
+                                                                                p, dict2str(k), dict2str(v)))
 
     logger.info('\n\n█████████████ BEST ████████████████')
     logger.info('\tParameters: {}={},\nValid: {},\nTest: {}\n\n'.format(config['hyper_parameters'],
-                                                                   hyper_ret[best_test_idx][0],
-                                                                   dict2str(hyper_ret[best_test_idx][1]),
-                                                                   dict2str(hyper_ret[best_test_idx][2])))
+                                                                hyper_ret[best_test_idx][0],
+                                                                dict2str(hyper_ret[best_test_idx][1]),
+                                                                dict2str(hyper_ret[best_test_idx][2])))
 

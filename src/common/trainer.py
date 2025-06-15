@@ -151,7 +151,7 @@ class Trainer(AbstractTrainer):
             self.optimizer.zero_grad()
             second_inter = interaction.clone()
             losses = loss_func(interaction)
-            
+
             if isinstance(losses, tuple):
                 loss = sum(losses)
                 loss_tuple = tuple(per_loss.item() for per_loss in losses)
@@ -274,6 +274,9 @@ class Trainer(AbstractTrainer):
                     self.logger.info(valid_result_output)
                     self.logger.info('test result: \n' + dict2str(test_result))
                 if update_flag:
+                    ## save best model
+                    torch.save(self.model.state_dict(), './best_ckpt.pth')
+                    self.logger.info(f"The best ckpt is saved in ./best_ckpt.pth")
                     update_output = '██ ' + self.config['model'] + '--Best validation results updated!!!'
                     if verbose:
                         self.logger.info(update_output)
@@ -302,6 +305,7 @@ class Trainer(AbstractTrainer):
         """
         self.model.eval()
 
+        # zero_num = []
         # batch full users
         batch_matrix_list = []
         for batch_idx, batched_data in enumerate(eval_data):
@@ -310,9 +314,12 @@ class Trainer(AbstractTrainer):
             masked_items = batched_data[1]
             # mask out pos items
             scores[masked_items[0], masked_items[1]] = -1e10
+            # count_per_row = (scores == -1e10).sum(dim=1)
+            # zero_num.extend(count_per_row.detach().cpu().numpy())
             # rank and get top-k
             _, topk_index = torch.topk(scores, max(self.config['topk']), dim=-1)  # nusers x topk
             batch_matrix_list.append(topk_index)
+        # np.save('./zero_num.npy',zero_num)
         return self.evaluator.evaluate(batch_matrix_list, eval_data, is_test=is_test, idx=idx)
 
     def plot_train_loss(self, show=True, save_path=None):

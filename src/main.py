@@ -34,6 +34,8 @@ if __name__ == '__main__':
     parser.add_argument('--behavior_knn_k', type=int, default=3000)
     parser.add_argument('--train_batch_size', type=int, default=2048)
     
+    parser.add_argument('--mode', type=str, default='train', choices=('train','test')) # 控制训练还是仅测试
+
     args, _ = parser.parse_known_args()
     assert _== [], (f"_: {_}")
 
@@ -49,7 +51,8 @@ if __name__ == '__main__':
         'image_knn_k': args.image_knn_k,
         'text_knn_k': args.text_knn_k,
         'behavior_knn_k': args.behavior_knn_k,
-        'train_batch_size': args.train_batch_size
+        'train_batch_size': args.train_batch_size,
+        'mode': args.mode
     }
 
     quick_start(model=args.model, dataset=args.dataset, config_dict=config_dict, save_model=True, mg = args.mg)

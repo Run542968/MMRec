@@ -12,6 +12,7 @@ import numpy as np
 def recall_(pos_index, pos_len):
     # Recall: average single users recall ratio.
     rec_ret = np.cumsum(pos_index, axis=1) / pos_len.reshape(-1, 1)
+    np.save('./rec_ret.npy',rec_ret)
     return rec_ret.mean(axis=0)
 
 
@@ -60,6 +61,7 @@ def ndcg_(pos_index, pos_len):
     dcg = np.cumsum(np.where(pos_index, dcg, 0), axis=1)
 
     result = dcg / idcg
+    np.save('./ndcg_ret.npy',result)
     return result.mean(axis=0)
 
 
