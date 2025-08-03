@@ -11,7 +11,7 @@ mge_weight: 1.0
 use_modality_distillation_loss: False
 
 #
-relation_distillation_func: 'CE' # [CE, KL]
+relation_distillation_func: 'KL' # [CE, KL]
 behavior_distillation_weight: 0.0
 visual_distillation_weight: 0.0
 textual_distillation_weight: 0.0

@@ -15,9 +15,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from common.abstract_recommender import GeneralRecommender
 
-class DIRD(GeneralRecommender):
+class MMREC(GeneralRecommender):
     def __init__(self, config, dataset):
-        super(DIRD, self).__init__(config, dataset)
+        super(MMREC, self).__init__(config, dataset)
 
         self.embedding_dim = config['embedding_size']
         self.feat_embed_dim = config['feat_embed_dim']

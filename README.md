@@ -17,5 +17,5 @@ pip install -r requirements.txt
 ```shell
 cd ~/MMRec/src
 
-python main.py --gpu_id 0 --dataset 'baby' --model 'DIRD' --exp_name 'TEST' --mge_weight 1.0 --relation_distillation_func 'KL' --behavior_distillation_weight 1.0 --behavior_graph_dropout_threshold 0 --visual_distillation_weight 1.0 --image_knn_k 5 10 15 20 --textual_distillation_weight 1.0 --text_knn_k 5 10 15 20 --behavior_knn_k 1500
+python main.py --gpu_id 0 --dataset 'baby' --model 'MMREC' --exp_name 'TEST' --mge_weight 1.0 --relation_distillation_func 'KL' --behavior_distillation_weight 1.0 --behavior_graph_dropout_threshold 0 --visual_distillation_weight 1.0 --image_knn_k 5 10 15 20 --textual_distillation_weight 1.0 --text_knn_k 5 10 15 20 --behavior_knn_k 1500
 ```
