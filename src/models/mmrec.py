@@ -197,7 +197,7 @@ class MMREC(GeneralRecommender):
         loss = batch_bpr_loss + self.reg_weight * batch_reg_loss
 
         if self.behavior_distillation_weight > 0:
-            ia_embeddings = F.normalize(ia_embeddings, dim=1)
+            ia_embeddings = F.normalize(ia_embeddings.detach(), dim=1)
             ia_topk_embeddigns = ia_embeddings[self.b_topk_indices.view(-1)].view(self.b_topk_indices.shape[0], self.behavior_knn_k, -1) # [item_num, k, dim]
             i2i_a_topk_similarity = torch.einsum('nd,nkd->nk', ia_embeddings, ia_topk_embeddigns) # [item_num, topk]
 
@@ -216,7 +216,7 @@ class MMREC(GeneralRecommender):
 
         if self.visual_distillation_weight > 0:
             iv_topk_embeddings = iv_embeddings[self.v_topk_indices.view(-1)].view(self.v_topk_indices.shape[0], self.image_knn_k, -1) # [item_num, k, dim]
-            i2i_v_topk_similarity = torch.einsum('nd,nkd->nk', iv_embeddings, iv_topk_embeddings) # [item_num, topk]
+            i2i_v_topk_similarity = torch.einsum('nd,nkd->nk', iv_embeddings, iv_topk_embeddings.detach()) # [item_num, topk]
             i2i_v_probability = F.softmax(i2i_v_topk_similarity, dim=-1)
 
             if self.relation_distillation_func == "CE":
@@ -229,7 +229,7 @@ class MMREC(GeneralRecommender):
 
         if self.textual_distillation_weight > 0:
             it_topk_embeddings = it_embeddings[self.t_topk_indices.view(-1)].view(self.t_topk_indices.shape[0], self.text_knn_k, -1) # [item_num, k, dim]
-            i2i_t_topk_similarity = torch.einsum('nd,nkd->nk', it_embeddings, it_topk_embeddings) # [item_num, topk]
+            i2i_t_topk_similarity = torch.einsum('nd,nkd->nk', it_embeddings, it_topk_embeddings.detach()) # [item_num, topk]
             i2i_t_probability = F.softmax(i2i_t_topk_similarity, dim=-1)
 
             if self.relation_distillation_func == "CE":
